@@ -63,16 +63,77 @@ ggplot(data = datos, aes(x = GrLivArea, y = SalePrice)) +
 
 ```{r}
 
+train <- read.csv("train.csv")
+library(caret)
 
+set.seed(123)
+trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
+trainData <- train[trainIndex, ]
+testData <- train[-trainIndex, ]
 
+lm_model <- lm(SalePrice ~ ., data = trainData[, sapply(trainData, is.numeric)])
 
+#variables significativas
+summary(lm_model)
+
+par(mfrow = c(2,2))
+plot(lm_model)
+
+predictions <- predict(lm_model, testData[, sapply(testData, is.numeric)])
+
+plot(predictions, testData$SalePrice)
+abline(0,1)
 ```
 
 9. Analice el modelo. Determine si hay multicolinealidad entre las variables, y cuáles son las que aportan al modelo, por su valor de significación. Haga un análisis de correlación de las características del modelo y especifique si el modelo se adapta bien a los datos. Explique si hay sobreajuste (overfitting) o no. En caso de existir sobreajuste, haga otro modelo que lo corrija. 
 
 ```{r}
-datos <- read.csv("train.csv")
 
 
+train <- read.csv("train.csv")
+library(caret)
+
+set.seed(123)
+trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
+trainData <- train[trainIndex, ]
+testData <- train[-trainIndex, ]
+correlations <- cor(trainData[, sapply(trainData, is.numeric)])
+
+# Visualizar la matriz de correlación 
+library(ggplot2)
+library(reshape2)
+
+ggplot(melt(correlations), aes(x = Var1, y = Var2, fill = value)) + 
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ggtitle("Matriz de correlación")
 
 ```
+
+
+
+
+En general, podemos decir que el modelo se ajusta bien a los datos, ya que podemos ver algunas correlaciones fuertes entre las características del modelo y la variable objetivo "SalePrice". Sin embargo, también hay algunas características altamente correlacionadas entre sí, lo que sugiere que podríamos considerar la eliminación de algunas de estas características para mejorar el rendimiento del modelo y reducir la complejidad.
+
+
+```{r}
+
+
+train <- read.csv("train.csv")
+library(caret)
+
+set.seed(123)
+trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
+trainData <- train[trainIndex, ]
+testData <- train[-trainIndex, ]
+correlations <- cor(trainData[, sapply(trainData, is.numeric)])
+library(corrplot)
+corr_matrix <- cor(trainData[, sapply(trainData, is.numeric)])
+corrplot(corr_matrix, method = "color")
+
+```
+
+De acuerdo con la matriz de correlación, las variables GarageYrBlt y YearBuilt tienen una correlación muy alta de 0.83. Esto indica que estas dos variables están muy relacionadas entre sí y pueden estar contribuyendo a la multicolinealidad en el modelo.
+
+Las variables con un valor de p menor a 0.05 son consideradas significativas para el modelo. En este caso, las variables MSSubClass, LotFrontage, LotArea, OverallQual, OverallCond, YearBuilt, BsmtFinSF1, 1stFlrSF, GrLivArea, BsmtFullBath, FullBath, HalfBath, TotRmsAbvGrd, Fireplaces, GarageCars, GarageArea, WoodDeckSF, OpenPorchSF, EnclosedPorch, ScreenPorch, MoSold, y YrSold tienen valores de p menores a 0.05 y, por lo tanto, se consideran significativas para el modelo.

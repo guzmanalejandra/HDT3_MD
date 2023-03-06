@@ -1,0 +1,78 @@
+---
+title: "Hoja3_MD"
+author: "Alejandra Guzman, Mariana David, Jorge Caballeros"
+date: "2023-03-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+7. Seleccione  una  de  las  variables  y  haga  un  modelo  univariado  de  regresión  lineal  para 
+predecir  el  precio  de  las  casas.  Analice  el  modelo  (resumen,  residuos,  resultados  de  la 
+predicción). Muéstrelo gráficamente. 
+
+Variable seleccionada: GrLivArea
+
+Se puede determinar por el resultado la variable escogifa es significativa para la prediccion de venta de casas (p-valor < 2e-16). La pendiente de la regresion
+indica que, en promedio, cad pue cuadrado adicinal de área habitable aumenta el precio de venta en $107.13
+
+
+```{r}
+datos <- read.csv("train.csv")
+modelo <- lm(SalePrice ~ GrLivArea, data = datos)
+summary(modelo)
+
+
+```
+
+La siguiente gráfica se utilizo para analizar los residuos del modelo, sugiriendo que el modelo podría no estar capturando completamente la relación entre "GrLivArea" 
+y "SalePrice", o que podría haber otras variables que influyen en la relación.
+
+```{r}
+datos <- read.csv("train.csv")
+modelo <- lm(SalePrice ~ GrLivArea, data = datos)
+plot(modelo, which = 1)
+predicciones <- predict(modelo, newdata = datos)
+
+```
+
+
+La gráfica muestra valores observados como puntos y la predicción como una línea roja, se puede ver la relación entre saleprice y grlivarea, la forma de U invertida
+sugiere que podrían haber factores que influyen la relación.
+
+```{r}
+datos <- read.csv("train.csv")
+modelo <- lm(SalePrice ~ GrLivArea, data = datos)
+predicciones <- predict(modelo, newdata = datos)
+library(ggplot2)
+ggplot(data = datos, aes(x = GrLivArea, y = SalePrice)) +
+  geom_point() +
+  geom_line(aes(y = predicciones), color = "red") +
+  labs(title = "Modelo de regresión lineal para predecir el precio de las casas",
+       x = "Área habitable (pies cuadrados)", y = "Precio de venta")
+```
+
+8. Haga un modelo de regresión lineal con todas las variables numéricas para predecir el precio de las casas. Analice el modelo (resumen, residuos, resultados de la predicción). Muestre el modelo gráficamente.
+
+
+
+```{r}
+
+
+
+
+```
+
+9. Analice el modelo. Determine si hay multicolinealidad entre las variables, y cuáles son las que aportan al modelo, por su valor de significación. Haga un análisis de correlación de las características del modelo y especifique si el modelo se adapta bien a los datos. Explique si hay sobreajuste (overfitting) o no. En caso de existir sobreajuste, haga otro modelo que lo corrija. 
+
+```{r}
+datos <- read.csv("train.csv")
+
+
+
+```

@@ -11,8 +11,8 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 
-
-7. Seleccione  una  de  las  variables  y  haga  un  modelo  univariado  de  regresión  lineal  para 
+***Ejericicio 7 ***
+Seleccione  una  de  las  variables  y  haga  un  modelo  univariado  de  regresión  lineal  para 
 predecir  el  precio  de  las  casas.  Analice  el  modelo  (resumen,  residuos,  resultados  de  la 
 predicción). Muéstrelo gráficamente. 
 
@@ -57,7 +57,7 @@ ggplot(data = datos, aes(x = GrLivArea, y = SalePrice)) +
        x = "Área habitable (pies cuadrados)", y = "Precio de venta")
 ```
 
-8. Haga un modelo de regresión lineal con todas las variables numéricas para predecir el precio de las casas. Analice el modelo (resumen, residuos, resultados de la predicción). Muestre el modelo gráficamente.
+***Ejericicio 8 ***Haga un modelo de regresión lineal con todas las variables numéricas para predecir el precio de las casas. Analice el modelo (resumen, residuos, resultados de la predicción). Muestre el modelo gráficamente.
 
 
 
@@ -85,7 +85,7 @@ plot(predictions, testData$SalePrice)
 abline(0,1)
 ```
 
-9. Analice el modelo. Determine si hay multicolinealidad entre las variables, y cuáles son las que aportan al modelo, por su valor de significación. Haga un análisis de correlación de las características del modelo y especifique si el modelo se adapta bien a los datos. Explique si hay sobreajuste (overfitting) o no. En caso de existir sobreajuste, haga otro modelo que lo corrija. 
+***Ejericicio 9 *** Analice el modelo. Determine si hay multicolinealidad entre las variables, y cuáles son las que aportan al modelo, por su valor de significación. Haga un análisis de correlación de las características del modelo y especifique si el modelo se adapta bien a los datos. Explique si hay sobreajuste (overfitting) o no. En caso de existir sobreajuste, haga otro modelo que lo corrija. 
 
 ```{r}
 
@@ -127,7 +127,7 @@ set.seed(123)
 trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
 trainData <- train[trainIndex, ]
 testData <- train[-trainIndex, ]
-correlations <- cor(trainData[, sapply(trainData, is.numeric)])
+correlations <-
 library(corrplot)
 corr_matrix <- cor(trainData[, sapply(trainData, is.numeric)])
 corrplot(corr_matrix, method = "color")
@@ -137,3 +137,73 @@ corrplot(corr_matrix, method = "color")
 De acuerdo con la matriz de correlación, las variables GarageYrBlt y YearBuilt tienen una correlación muy alta de 0.83. Esto indica que estas dos variables están muy relacionadas entre sí y pueden estar contribuyendo a la multicolinealidad en el modelo.
 
 Las variables con un valor de p menor a 0.05 son consideradas significativas para el modelo. En este caso, las variables MSSubClass, LotFrontage, LotArea, OverallQual, OverallCond, YearBuilt, BsmtFinSF1, 1stFlrSF, GrLivArea, BsmtFullBath, FullBath, HalfBath, TotRmsAbvGrd, Fireplaces, GarageCars, GarageArea, WoodDeckSF, OpenPorchSF, EnclosedPorch, ScreenPorch, MoSold, y YrSold tienen valores de p menores a 0.05 y, por lo tanto, se consideran significativas para el modelo.
+
+
+
+
+
+***Ejericicio 10 ***
+Si tiene multicolinealidad o sobreajuste, haga un modelo con las variables que sean mejores
+predictoras del precio de las casas. Determine la calidad del modelo realizando un análisis
+de los residuos. Muéstrelo gráficamente.
+
+```{r}
+# Cargar los datos y ajustar el modelo
+train <- read.csv("train.csv")
+library(caret)
+set.seed(123)
+trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
+trainData <- train[trainIndex, ]
+testData <- train[-trainIndex, ]
+predictors <- c("OverallQual", "GrLivArea", "GarageCars", "TotalBsmtSF", "FullBath", "YearBuilt")
+lm.fit <- lm(SalePrice ~ ., data = trainData[, c(predictors, "SalePrice")])
+
+# Graficar los residuos
+par(mfrow = c(2, 2))
+plot(lm.fit$residuals, pch = 20, main = "Residuals vs Fitted")
+plot(lm.fit$fitted.values, lm.fit$residuals, pch = 20, main = "Residuals vs Fitted Values")
+qqnorm(lm.fit$residuals, main = "Normal Q-Q Plot")
+qqline(lm.fit$residuals)
+hist(lm.fit$residuals, main = "Histogram of Residuals")
+
+
+
+```
+
+
+El el primer grafico "Residuals vs Fitted" podemos observar que no hay un patron claro en los datos, por lo que podemos sujerir que el modelo puede ser apropiado para los datos. Posteriormente en el gráfico de "Residuals vs Fitted Values" , se ve como los puntos estan distribuidos aleatoriamente sobre la linea cero, lo que nos dice que la varianza de error es constante en todos los niveles del predictor, es decir esta varianza del error es constante, esto simplemente nos corrobora el hecho que el error no está variando demasiado entre predicciones. En la grafica "Normal Q-Q Plot" se nos muestra si los residuos se distribuyen normalmente, en este caso dado que están ajustados casi en linea recta podemos asumir que se da esta observación. Para la gráfica "Histogram of Residuals" se nos muestra una grafica donde podemos ver la distribución de los residuos, dado que el gráfica esta aproximadamente en una forma de campana podemos suponer que el modelo es adecuado para los datos.
+
+
+***Ejercicio 11 ***
+
+Utilice cada modelo con el conjunto de prueba y determine la eficiencia del algoritmo para
+predecir el precio de las casas. ¿Qué tan bien lo hizo?
+
+
+***Modelo 1 ***
+
+```{R}
+predictions <- predict(lm_model, na.omit(testData[, sapply(testData, is.numeric)]))
+R2 <- summary(lm_model)$r.squared
+MSE <- mean((predictions - testData$SalePrice)^2)
+cat(paste0("R cuadrado: ", round(R2, 3), "\n"))
+cat(paste0("MSE: ", round(MSE, 3), "\n"))
+```
+
+El modelo 1 utiliza todas las variables numéricas del conjunto de datos y muestra un R cuadrado de 0.836 y un MSE de 14555852465. Esto indica que el modelo explica aproximadamente el 86% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 1.33 billones de dólares.
+
+***Modelo 2***
+```{r}
+predictions <- predict(lm.fit, testData[, c(predictors)])
+R2 <- summary(lm.fit)$r.squared
+MSE <- mean((predictions - testData$SalePrice)^2)
+cat(paste0("R cuadrado: ", round(R2, 3), "\n"))
+cat(paste0("MSE: ", round(MSE, 3), "\n"))
+
+```
+
+El modelo 2 utiliza un conjunto específico de variables predictoras y muestra un R cuadrado de 0.78 y un MSE de 223274775. Esto indica que el modelo explica aproximadamente el 84% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 1.45 billones de dólares.
+
+En general, ambos modelos tienen un buen desempeño al predecir el precio de las casas, pero el modelo 1 parece ser ligeramente mejor en términos de R cuadrado y MSE. Sin embargo, se puede considerar que el modelo 2 es más fácil de interpretar debido a que utiliza un conjunto específico de variables predictoras seleccionadas previamente.
+
+

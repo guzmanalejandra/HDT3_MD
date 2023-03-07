@@ -190,7 +190,7 @@ cat(paste0("R cuadrado: ", round(R2, 3), "\n"))
 cat(paste0("MSE: ", round(MSE, 3), "\n"))
 ```
 
-El modelo 1 utiliza todas las variables numéricas del conjunto de datos y muestra un R cuadrado de 0.836 y un MSE de 14555852465. Esto indica que el modelo explica aproximadamente el 86% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 1.33 billones de dólares.
+El modelo 1 utiliza todas las variables numéricas del conjunto de datos y muestra un R cuadrado de 0.836 y un MSE de 14555852465. Esto indica que el modelo explica aproximadamente el 86% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 1.4 billones de dólares.
 
 ***Modelo 2***
 ```{r}
@@ -202,8 +202,44 @@ cat(paste0("MSE: ", round(MSE, 3), "\n"))
 
 ```
 
-El modelo 2 utiliza un conjunto específico de variables predictoras y muestra un R cuadrado de 0.78 y un MSE de 223274775. Esto indica que el modelo explica aproximadamente el 84% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 1.45 billones de dólares.
+El modelo 2 utiliza un conjunto específico de variables predictoras y muestra un R cuadrado de 0.78 y un MSE de 223274775. Esto indica que el modelo explica aproximadamente el 84% de la variabilidad en el conjunto de prueba y tiene un error medio cuadrático de alrededor de 2.2 billones de dólares.
+
+
+
+***Ejercicio 12 ***
+Discuta sobre la efectividad de los modelos. ¿Cuál lo hizo mejor? ¿Cuál es el mejor modelo
+para predecir el precio de las casas? Haga los gráficos que crea que le pueden ayudar en la
+discusión.
 
 En general, ambos modelos tienen un buen desempeño al predecir el precio de las casas, pero el modelo 1 parece ser ligeramente mejor en términos de R cuadrado y MSE. Sin embargo, se puede considerar que el modelo 2 es más fácil de interpretar debido a que utiliza un conjunto específico de variables predictoras seleccionadas previamente.
+
+Después de haber utilizado ambos modelos para predecir el precio de las casas en el conjunto de prueba, podemos comparar la efectividad de cada modelo mediante la evaluación de diferentes métricas de desempeño.
+
+Para el modelo 1, como el MSE salió como NA, podemos evaluar la efectividad a través del coeficiente de determinación R cuadrado. Al mirar el resumen del modelo, vemos que R cuadrado es de 0.8343, lo que significa que el modelo explica el 83.43% de la variabilidad en los precios de las casas.
+
+
+Podemos calcular el mse del modelo 2 de la siguiente manera: 
+ 
+
+```{r}
+mse <- mean((testData$SalePrice - predictions)^2)
+mse
+```
+
+El MSE para el modelo 2 es de 2232747. Esto significa que, en promedio, el modelo se equivoca en la predicción del precio de las casas en unos 2,232,747 dólares.
+
+En términos generales, el modelo 2 parece ser más efectivo para predecir los precios de las casas. Aunque el modelo 1 tiene un alto R cuadrado, no proporciona una medida directa del error de predicción. El modelo 2, por otro lado, tiene un MSE calculado que indica cuánto se equivoca el modelo en promedio.
+
+Para confirmar la efectividad del modelo 2, podemos hacer una gráfica de dispersión entre los precios de venta reales y las predicciones del modelo. Si el modelo es efectivo, esperaríamos ver una línea diagonal cercana a 45 grados en la gráfica. Podemos hacer esto con el siguiente código:
+
+```{r}
+plot(predictions, testData$SalePrice, main = "Modelo 2: Predicciones vs. Precios reales", xlab = "Predicciones", ylab = "Precios reales")
+abline(0, 1, col = "red")
+
+```
+
+La gráfica muestra que el modelo 2 tiene una relación casi perfecta entre las predicciones y los precios reales, ya que la línea roja (que representa la línea diagonal) está muy cerca de ser una línea recta perfecta. Esto sugiere que el modelo 2 es muy efectivo para predecir los precios de las casas.
+
+En conclusión, el modelo 2 parece ser el mejor modelo para predecir el precio de las casas, ya que tiene un MSE calculado y una gráfica de dispersión que indican una buena precisión en las predicciones.
 
 

@@ -9,6 +9,278 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Librerias utilizadas 
+```{r, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(cluster) #Para calcular la silueta
+library(e1071)#para cmeans
+library(mclust) #mixtures of gaussians
+library(fpc) #para hacer el plotcluster
+library(NbClust) #Para determinar el número de clusters óptimo
+library(factoextra) #Para hacer gráficos bonitos de clustering
+library(hopkins) #Para revisar si vale la pena hacer agrupamiento
+library(GGally) #Para hacer el conjunto de graficos
+library(FeatureImpCluster) #revisa importancia de var
+library(pheatmap) #Para hacer mapa de calor
+library(ggplot2) #para color
+library(caret)
+library(nortest)
+library(tidyverse)
+library(ggpubr)
+library(stats)
+library(Metrics)
+```
+
+# 1. Descargar los datos y cargar los datos 
+Guardaremos train en un objeto llamado data
+```{r}
+data <- read.csv('./train.csv') # nolint
+```
+
+# 2. Analisis exploratorio 
+## Variables numericas 
+Presentamos las variables de nuestra data que pertenecen al ambito numérico 
+```{r}
+vars_numericas <- sapply(data, is.numeric)
+print(vars_numericas)
+```
+
+Realizamos un analisis de data frame con los datos sacados con anterioridad para poder analizarlos 
+```{r}
+numeric_data <- select_if(data, is.numeric)
+numeric_data <- numeric_data[complete.cases(numeric_data), ]
+```
+
+Normalizamos el paso anterior 
+```{r}
+numeric_data <- scale(na.omit(numeric_data))
+```
+
+## Analisis de Hopkins 
+Realizamos un análisis de Hopkings, en donde si este sale superior a 0.5 que es el valor esperado, entonces podemos generar divisiones o agrupamientos en la data.
+```{r}
+set.seed(123)
+hopkins(numeric_data)
+data_dist <- dist(numeric_data)
+```
+Al ver que el valor de Hopkins en superiro a 0.5, podemos hacer divisiones en la data
+
+## Metodo grafico la VAT
+```{r}
+knitr::opts_chunk$set(fig.width = 20, fig.height = 10)
+fviz_dist(data_dist, show_labels = FALSE)
+```
+Como se puede observar si existen patrones en la grafica, tiene cualidades compartidas y por ende agrupales. 
+También confirma nuevamente el resultado Hopkins.
+
+## Analisis de Clusters
+
+```{r}
+wss=0
+for (i in 1:10) 
+  wss[i] <- sum(kmeans(numeric_data, centers = i)$withinss)
+plot(1:10, wss, type="b", xlab="Número de Clusters",
+  ylab="Suma de los cuadraros dentro de los grupos",
+   col = "magenta")
+```
+
+## Análisis de silueta / Clusters
+```{r}
+fviz_nbclust(numeric_data[, 1:4], kmeans, method = "silhouette") +
+labs(subtitle = "Silhouette method")
+ #Clustering jerarquico
+hclust_res <- hclust(dist(numeric_data), method = "complete")
+clusters_hclust <- cutree(hclust_res, k = 5)
+```
+Con las variables clusters_kmeans y clusters_hclust, podemos hacer una comparación.
+
+# 3. Analisis de grupo
+## Analizar el petal de los datos 
+
+```{r}
+# Cargando el conjunto de datos Iris
+data(iris)
+
+# Creando un data frame con los datos y la variable objetivo
+datos <- data.frame(iris$Sepal.Length, iris$Sepal.Width, iris$Petal.Length, iris$Petal.Width, iris$Species) # nolint
+
+# Renombrando las columnas
+colnames(datos) <- c("Sepal.length", "Sepal.width", "Petal.length", "Petal.width", "Species") # nolint
+
+```
+
+## Graficar las variables Petal.Length y Petal.Width
+
+```{r}
+# Verificar si hay valores no finitos en x
+is.finite(datos$Petal.length)
+
+# Eliminar filas con valores perdidos de los datos
+datos_sin_na <- na.omit(datos)
+
+# Graficar los datos sin valores perdidos en x
+plot(datos_sin_na$Petal.length, datos_sin_na$Petal.width,
+     xlab = "Petal length",
+     ylab = "Petal width",
+     main = "Petal length vs Petal width", col = "darkorchid4")
+
+```
+# 4.Division del set: Entrenamiento y prueba 
+```{r}
+# separar las variables de respuesta
+Specie <- datos$Specie # nolint
+Petal.length <- datos$Petal.length # nolint
+# eliminar las variables de respuesta del conjunto de datos original
+datos <- datos[, !(names(datos) %in% c("Specie", "Petal.length"))]
+# dividir los datos en conjuntos de entrenamiento y prueba
+set.seed(123)  # para hacer los resultados reproducibles
+library(caTools)
+train_size <- 0.7
+split <- sample.split(1:nrow(datos), SplitRatio = train_size) # nolint
+X_train <- datos[split, ] # nolint
+X_test <- datos[!split, ] # nolint
+y_train <- Petal.length[split]
+y_test <- Petal.length[!split]
+```
+Teniendo en cuenta que se usaremos 70% de entrenamiento y 30% de los datos en forma prueba
+
+## Haciendo regresion lineal 
+```{r}
+# convertir vectores a matrices
+p_length <- matrix(y_train, ncol = 1)
+p_length_t <- matrix(y_test, ncol = 1)
+p_width <- matrix(X_train$Petal.width, ncol = 1)
+p_width_t <- matrix(X_test$Petal.width, ncol = 1)
+# ajustar el modelo de regresión lineal
+lm <- lm(p_length ~ p_width)
+# predecir valores de longitud de pétalo para los datos de prueba
+p_length_pred <- predict(lm, newdata = list(p_width = p_width_t))
+```
+
+## Haciendo la ecuacion 
+```{r}
+# y = mx + c # nolint
+m <- coef(lm)[2]
+c <- coef(lm)[1]
+label <- sprintf("p_length = %0.4f*p_width %+0.4f", m, c)
+cat(label)
+```
+
+## Grafica de datos y predicciones  
+```{r}
+# crear un data frame con los datos de prueba y las predicciones
+df <- data.frame(Petal.length = p_length_t[,1], Petal.width = p_width_t[,1], Predicted.Petal.length = p_length_pred)
+# graficar los datos y las predicciones
+ggplot(df, aes(x = Petal.length, y = Petal.width)) + 
+  geom_point() + 
+  geom_line(aes(x = Predicted.Petal.length, y = Petal.width), color = "magenta") + 
+  labs(x = "Petal length", y = "Petal width", title = "Test Set Petal length vs Petal width")
+```
+
+## Analizadno R²
+```{r}
+# Calcular el error cuadrático medio y el coeficiente de determinación
+mse <- mse(p_length_t, p_length_pred)
+rsq <- summary(lm(p_length_t ~ p_length_pred))$r.squared
+# Imprimir los resultados
+cat("Error medio cuadrado: ", format(mse, digits = 2), "\n")
+cat("R-cuadrado: ", format(rsq, digits = 2), "\n")
+```
+Este análisis hace referencia a que hay 90% de la variabilidad de los datos; signigicando que es un resultado bueno.
+
+## Analisis de los residuales
+```{r}
+residuales <- p_length_t - p_length_pred
+length(residuales)
+```
+A continuacion se genera un grafico para los residuales 
+
+```{r}
+plot(p_width_t, residuales, pch = 20, col = "magenta",
+     main = "Gráfico de Residuales",
+     xlab = "Variable independiente",
+     ylab = "Residuales")
+```
+Como podemos obersvar según el gráfico de los puntos residuale se puede observar que parecen estar distribuidos de una manera bastante aleatoria pero con un tipo de rango rodeando al cero 
+
+Ahora por medio de una grafica de campana analizaremos los residuales y tambien por medio de caja y bigotes 
+```{r}
+# residuales
+residuales <- p_length_t - p_length_pred
+length(residuales)
+# distribución de residuales
+library(ggplot2)
+ggplot(data.frame(residuales), aes(x = residuales)) +
+  geom_histogram(bins = 30, color = "blue", fill = "lightblue") +
+  ggtitle("Residuales") +
+  xlab("Residuales")
+```
+
+A continuacion se presenta el analissi por medio del método grafico de caja y bigotes 
+```{r}
+# diagrama de caja y bigoes  de residuales
+boxplot(residuales, main = "Diagrama de caja y bigotes de los residuales")
+```
+Como podemos ver los residuos siguen una distribución normal. Sine mebargo se aplicara un  procedimiento adicional para garantizar si estos son mayores al valor normal 0.5
+```{r}
+shapiro.test(residuales)
+```
+Como vemos al aplicar shapiro vemos que el valor de p es mayor a 0.05, por ende se sostiene que el analisis de los residuos siguen una distribucion normal.
+
+
+# 5-6. Ingenieria de características
+¿Qué variables cree que puedan ser mejores predictores para el precio de las casas?
+```{r}
+id <- as.numeric(numeric_data[, "Id"])
+GrLivArea <- as.numeric(numeric_data[, "GrLivArea"])
+OverallQual <- as.numeric(numeric_data[, "OverallQual"])
+SalePrice <- as.numeric(numeric_data[, "SalePrice"])
+regresion_lineal <- data.frame(id, GrLivArea, OverallQual, SalePrice)
+porcentaje <- 0.7
+corte <- sample(nrow(regresion_lineal), nrow(regresion_lineal) * porcentaje)
+train <- data.frame(numeric_data[corte, ])
+test <- data.frame(numeric_data[-corte, ])
+fitLPMW <- lm(SalePrice~OverallQual, data = train)
+prediccion <- predict(fitLPMW, newdata = test)
+```
+A continuaciona se muestran los valores de las respectivas predicciones esperadas
+```{r}
+head(prediccion)
+#Longitud de las predicciones
+length(prediccion)
+```
+
+A continuacion se presenta un analisis de los residuals vs fitted
+```{r}
+head(fitLPMW$residuals)
+#grafica respectiva
+plot(fitLPMW, col = "cyan4")# residuals vs fitted
+```
+
+A continuacion jugamos con los datos, en este caso encontraremos el SalePrice para un cojunto de prueba
+```{r}
+prediccionM <- predict(fitLPMW, newdata = test[, c(1, 2, 4)])
+rmse(prediccionM, test$SalePrice)
+```
+```{r}
+plot(test$SalePrice, col = "coral")
+points(prediccionM, col = "cadetblue")
+```
+
+Como podemos ver las variables que pueden ser mejores predictores para el precio de las casas son: 
+
+-id
+-GrLivArea 
+-OverallQual 
+-SalePrice 
+ 
+Una muestra de que son mejores predictores por medio del histograma el cual nos ayuda con un analisis macro
+## Realizacion del histograma para ver la figura de campana
+```{r}
+hist(fitLPMW$residuals, col = "darkseagreen")
+```
+Como podemos ver los resultados de prueba/entrenamiento arrojaron resultados que si muestran una campana bastante adecuada 
 
 
 ***Ejericicio 7 ***
@@ -53,7 +325,7 @@ library(ggplot2)
 ggplot(data = datos, aes(x = GrLivArea, y = SalePrice)) +
   geom_point() +
   geom_line(aes(y = predicciones), color = "red") +
-  labs(title = "Modelo de regresión lineal para predecir el precio de las casas",
+  labs(title = "Modelo de regresión lineal para predecir el precio de las casas", # nolint
        x = "Área habitable (pies cuadrados)", y = "Precio de venta")
 ```
 
@@ -76,13 +348,13 @@ lm_model <- lm(SalePrice ~ ., data = trainData[, sapply(trainData, is.numeric)])
 #variables significativas
 summary(lm_model)
 
-par(mfrow = c(2,2))
+par(mfrow = c(2, 2))
 plot(lm_model)
 
 predictions <- predict(lm_model, testData[, sapply(testData, is.numeric)])
 
 plot(predictions, testData$SalePrice)
-abline(0,1)
+abline(0, 1)
 ```
 
 ***Ejericicio 9 *** Analice el modelo. Determine si hay multicolinealidad entre las variables, y cuáles son las que aportan al modelo, por su valor de significación. Haga un análisis de correlación de las características del modelo y especifique si el modelo se adapta bien a los datos. Explique si hay sobreajuste (overfitting) o no. En caso de existir sobreajuste, haga otro modelo que lo corrija. 
@@ -99,13 +371,13 @@ trainData <- train[trainIndex, ]
 testData <- train[-trainIndex, ]
 correlations <- cor(trainData[, sapply(trainData, is.numeric)])
 
-# Visualizar la matriz de correlación 
+# Visualizar la matriz de correlación
 library(ggplot2)
 library(reshape2)
 
 ggplot(melt(correlations), aes(x = Var1, y = Var2, fill = value)) + 
   geom_tile() +
-  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) + # nolint
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle("Matriz de correlación")
 
@@ -155,13 +427,13 @@ set.seed(123)
 trainIndex <- createDataPartition(train$SalePrice, p = 0.8, list = FALSE)
 trainData <- train[trainIndex, ]
 testData <- train[-trainIndex, ]
-predictors <- c("OverallQual", "GrLivArea", "GarageCars", "TotalBsmtSF", "FullBath", "YearBuilt")
+predictors <- c("OverallQual", "GrLivArea", "GarageCars", "TotalBsmtSF", "FullBath", "YearBuilt") # nolint
 lm.fit <- lm(SalePrice ~ ., data = trainData[, c(predictors, "SalePrice")])
 
 # Graficar los residuos
 par(mfrow = c(2, 2))
 plot(lm.fit$residuals, pch = 20, main = "Residuals vs Fitted")
-plot(lm.fit$fitted.values, lm.fit$residuals, pch = 20, main = "Residuals vs Fitted Values")
+plot(lm.fit$fitted.values, lm.fit$residuals, pch = 20, main = "Residuals vs Fitted Values") # nolint
 qqnorm(lm.fit$residuals, main = "Normal Q-Q Plot")
 qqline(lm.fit$residuals)
 hist(lm.fit$residuals, main = "Histogram of Residuals")
@@ -233,7 +505,7 @@ En términos generales, el modelo 2 parece ser más efectivo para predecir los p
 Para confirmar la efectividad del modelo 2, podemos hacer una gráfica de dispersión entre los precios de venta reales y las predicciones del modelo. Si el modelo es efectivo, esperaríamos ver una línea diagonal cercana a 45 grados en la gráfica. Podemos hacer esto con el siguiente código:
 
 ```{r}
-plot(predictions, testData$SalePrice, main = "Modelo 2: Predicciones vs. Precios reales", xlab = "Predicciones", ylab = "Precios reales")
+plot(predictions, testData$SalePrice, main = "Modelo 2: Predicciones vs. Precios reales", xlab = "Predicciones", ylab = "Precios reales") # nolint
 abline(0, 1, col = "red")
 
 ```
